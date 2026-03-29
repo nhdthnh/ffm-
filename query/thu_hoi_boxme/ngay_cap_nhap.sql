@@ -1,0 +1,1 @@
+select distinct ngay_cap_nhat from thu_hoi_boxme

@@ -1,0 +1,1 @@
+select distinct sku, ten_sp from thu_hoi_boxme

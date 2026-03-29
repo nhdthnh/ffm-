@@ -1,0 +1,1 @@
+select distinct ngay_nhap from nhap_kho_hcns
