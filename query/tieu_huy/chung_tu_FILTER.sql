@@ -1,0 +1,1 @@
+select distinct phan_loai from tieu_huy

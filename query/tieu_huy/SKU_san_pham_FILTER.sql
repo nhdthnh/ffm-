@@ -1,0 +1,1 @@
+select distinct ma_barcode as 'sku', ten_san_pham as "ten_sp" from tieu_huy
