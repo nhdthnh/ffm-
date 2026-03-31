@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import text
 from utils import get_engine, load_query
 
-def render_data_grid(selected_skus):
+def render_data_grid(selected_ngay, selected_skus):
     engine = get_engine()
     
     q_data_template = load_query("kho_hcns_khong_chung_tu/all.sql")
@@ -15,6 +15,10 @@ def render_data_grid(selected_skus):
         df_data = pd.read_sql(text(sql_text), conn)
 
     # Apply Filters in Pandas for safety/flexibility
+    if selected_ngay and selected_ngay != "Tất cả":
+        if 'Ngày cập nhật' in df_data.columns:
+            df_data = df_data[df_data['Ngày cập nhật'].astype(str).str.startswith(selected_ngay)]
+
     if selected_skus:
         df_data = df_data[df_data['SKU'].isin(selected_skus)]
 

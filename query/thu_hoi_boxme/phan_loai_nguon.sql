@@ -1,0 +1,1 @@
+select distinct phan_loai from thu_hoi_boxme

@@ -1,6 +1,6 @@
 import streamlit as st
 import base64
-from views import thu_hoi_boxme, hang_nhap_kho_hcns, hang_ton_csr, kho_hcns_khong_chung_tu, tieu_huy, login, system_logs
+from views import thu_hoi_boxme, hang_nhap_kho_hcns, hang_ton_csr, kho_hcns_khong_chung_tu, tieu_huy, login, system_logs, report
 import utils_auth
 
 # Page configuration
@@ -77,13 +77,13 @@ else:
         page = st.radio(
             "Điều hướng",
             [
+                "📊 Report",
                 "📦 Thu hồi Boxme",
                 "📥 Hàng nhập kho HCNS",
                 "🧾 Hàng tồn CSR",
                 "📋 HCNS không chứng từ",
                 "🗑️ Tiêu hủy",
-                "📓 Nhật ký hệ thống",
-                "📊 Report"
+                "📓 Nhật ký hệ thống"
             ],
             label_visibility="collapsed"
         )
@@ -101,3 +101,5 @@ else:
         tieu_huy.show()
     elif page == "📓 Nhật ký hệ thống":
         system_logs.show()
+    elif page == "📊 Report":
+        report.show()

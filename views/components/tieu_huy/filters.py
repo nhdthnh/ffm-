@@ -7,13 +7,18 @@ def render_filters():
     engine = get_engine()
     with engine.begin() as conn:
         
+        # Ngày cập nhật Filter
+        q_ngay = load_query("tieu_huy/ngay_cap_nhap_FILTER.sql")
+        df_ngay = pd.read_sql(text(q_ngay), conn)
+        ngay_options = [str(row['ngay_cap_nhap']) for _, row in df_ngay.iterrows() if pd.notnull(row['ngay_cap_nhap'])]
+
         # Phân loại Filter
         q_phan_loai = load_query("tieu_huy/chung_tu_FILTER.sql")
-        df_phan_loai = pd.read_sql(q_phan_loai, conn)
+        df_phan_loai = pd.read_sql(text(q_phan_loai), conn)
         
         # SKUs Filter
         q_skus = load_query("tieu_huy/SKU_san_pham_FILTER.sql")
-        df_skus = pd.read_sql(q_skus, conn)
+        df_skus = pd.read_sql(text(q_skus), conn)
         sku_options = []
         for _, row in df_skus.iterrows():
             sku_options.append({
@@ -27,14 +32,18 @@ def render_filters():
         
             
     # Render UI layout
-    col1, col2 = st.columns([1, 1.5])
+    col1, col2, col3 = st.columns([1, 1, 1.5])
+    
     with col1:
-        selected_phan_loai = st.selectbox("Chọn phân loại", ["Tất cả"] + phan_loai_options)
+        selected_ngay = st.selectbox("Chọn Ngày Cập Nhật", ["Tất cả"] + ngay_options)
         
     with col2:
+        selected_phan_loai = st.selectbox("Chọn phân loại", ["Tất cả"] + phan_loai_options)
+        
+    with col3:
         sku_labels = [opt["label"] for opt in sku_options]
         selected_sku_label = st.multiselect("Tìm kiếm SKU / Sản phẩm", sku_labels, placeholder="Chọn SKU hoặc Sản phẩm")
         
     selected_skus = [opt["sku"] for opt in sku_options if opt["label"] in selected_sku_label]
     
-    return selected_phan_loai, selected_skus
+    return selected_ngay, selected_phan_loai, selected_skus

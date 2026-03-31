@@ -7,69 +7,83 @@ import utils_auth
 def render_import_section():
     engine = get_engine()
     with st.expander("⬆️ Import Data từ file Excel", expanded=False):
-        uploaded_file = st.file_uploader("Tải lên file Excel Tổng hợp (nhấn Browse)", type=['xlsx', 'xls'])
+        uploaded_file = st.file_uploader("Tải lên file Excel tổng hợp", type=['xlsx', 'xls'])
         if uploaded_file is not None:
             if st.button("Tiến hành Import Dữ liệu", type="primary"):
                 with st.spinner("Đang đọc luồng dữ liệu..."):
                     try:
-                        df_raw = pd.read_excel(uploaded_file, sheet_name="DANH SÁCH HÀNG NHẬP KHO HCNS", header=None, nrows=15)
+                        xls = pd.ExcelFile(uploaded_file)
+                        target_sheet = None
+                        for s in xls.sheet_names:
+                            if "TIÊU HỦY" in s.upper():
+                                target_sheet = s
+                                break
+                        if not target_sheet:
+                            target_sheet = "DANH SÁCH TIÊU HỦY"
+
+                        df_raw = pd.read_excel(uploaded_file, sheet_name=target_sheet, header=None, nrows=15)
                         header_idx = 0
                         for i, row in df_raw.iterrows():
-                            vals = [str(v).upper().strip() for v in row if pd.notna(v)]
-                            if any('MÃ BARCODE' in v for v in vals) or any('TÊN GỌI' in v for v in vals) or any('MÃ SP' in v for v in vals):
+                            vals = [str(v).upper().replace('\n', ' ').replace('\r', ' ').strip() for v in row if pd.notna(v)]
+                            if any('MÃ BARC' in v for v in vals) or any('TÊN SẢN PHẨM' in v for v in vals) or any('SL' in v for v in vals):
                                 header_idx = i
                                 break
                         
-                        df = pd.read_excel(uploaded_file, sheet_name="DANH SÁCH HÀNG NHẬP KHO HCNS", header=header_idx)
+                        df = pd.read_excel(uploaded_file, sheet_name=target_sheet, header=header_idx)
                         
-                        barcode_col = next((c for c in df.columns if 'MÃ BARCODE' in str(c).upper()), None)
-                        masp_col = next((c for c in df.columns if 'MÃ SP' in str(c).upper() and 'BARCODE' not in str(c).upper()), None)
-                        ten_col = next((c for c in df.columns if 'TÊN GỌI' in str(c).upper() or 'TÊN SẢN PHẨM' in str(c).upper()), None)
-                        dvt_col = next((c for c in df.columns if 'ĐƠN VỊ' in str(c).upper()), None)
-                        sl_col = next((c for c in df.columns if str(c).upper().strip() in ['SL', 'SỐ LƯỢNG']), None)
-                        hsd_col = next((c for c in df.columns if str(c).upper().strip() in ['HSD', 'HẠN SỬ DỤNG']), None)
-                        ngaynhap_col = next((c for c in df.columns if 'NGÀY NHẬP' in str(c).upper()), None)
-                        ghi_chu_col = next((c for c in df.columns if 'GHI CHÚ' in str(c).upper()), None)
+                        import re
+                        def norm_col(c):
+                            return re.sub(r'\s+', ' ', str(c).upper().strip())
 
-                        if barcode_col:
-                            df = df[df[barcode_col].notna()].copy()
-                            df = df[df[barcode_col].astype(str).str.strip() != ""].copy()
+                        barcode_col = next((c for c in df.columns if any(k in norm_col(c) for k in ['MÃ BARC', 'SKU'])), None)
+                        masp_col = next((c for c in df.columns if 'MÃ SP' in norm_col(c) and 'BARCODE' not in norm_col(c)), None)
+                        ten_col = next((c for c in df.columns if any(k in norm_col(c) for k in ['TÊN SẢN PHẨM', 'TÊN GỌI', 'TÊN SP'])), None)
+                        sl_col = next((c for c in df.columns if any(k in norm_col(c) for k in ['SỐ LƯỢNG', 'SL'])), None)
+                        hsd_col = next((c for c in df.columns if any(k in norm_col(c) for k in ['HẠN SỬ DỤNG', 'HSD', 'HẠN', 'DATE'])), None)
+                        pl_col = next((c for c in df.columns if 'PHÂN LOẠI' in norm_col(c)), None)
+
+                        if barcode_col or ten_col or masp_col:
+                            filter_cols = [c for c in [barcode_col, ten_col, masp_col] if c]
+                            if filter_cols:
+                                df = df.dropna(subset=filter_cols, how='all').copy()
                             
                             count = 0
                             skip = 0
                             
                             with engine.begin() as conn:
+                                # Xoá dữ liệu cũ trước khi nạp sheet tồn kho mới
+                                conn.execute(text("TRUNCATE TABLE tieu_huy"))
+                                
                                 for _, r in df.iterrows():
-                                    sku = safe_barcode(r.get(barcode_col))
-                                    if not sku:
+                                    sku = safe_barcode(r.get(barcode_col)) if barcode_col else ""
+                                    ten = safe_str(r.get(ten_col)) if ten_col else ""
+                                    msp = safe_str(r.get(masp_col)) if masp_col else ""
+                                    
+                                    if not sku and not ten and not msp:
                                         skip += 1
                                         continue
                                     
                                     conn.execute(text("""
-                                        INSERT INTO nhap_kho_hcns (
-                                            ma_barcode, ten_san_pham, don_vi_tinh,
-                                            han_su_dung, so_luong,
-                                            ngay_nhap, ghi_chu,
-                                            ma_sp
+                                        INSERT INTO tieu_huy (
+                                            ma_sp, ma_barcode, ten_san_pham, 
+                                            so_luong, han_su_dung, phan_loai,
+                                            ngay_cap_nhap
                                         ) VALUES (
-                                            :sku,  :ten,   :dvt,
-                                            :hsd,  :sl,
-                                            :nnk,  :gc,
-                                            :msp
+                                            :msp, :sku, :ten, 
+                                            :sl, :hsd, :pl,
+                                            CURRENT_TIMESTAMP()
                                         )
                                     """), {
+                                        "msp"  : msp,
                                         "sku"  : sku,
-                                        "ten"  : safe_str(r.get(ten_col)) if ten_col else "",
-                                        "dvt"  : safe_str(r.get(dvt_col)) if dvt_col else "",
+                                        "ten"  : ten,
                                         "hsd"  : safe_date(r.get(hsd_col)) if hsd_col else None,
                                         "sl"   : safe_int(r.get(sl_col)) if sl_col else 0,
-                                        "nnk"  : safe_date(r.get(ngaynhap_col)) if ngaynhap_col else None,
-                                        "gc"   : safe_str(r.get(ghi_chu_col)) if ghi_chu_col else "",
-                                        "msp"  : safe_barcode(r.get(masp_col)) if masp_col else ""
+                                        "pl"   : safe_str(r.get(pl_col)) if pl_col else ""
                                     })
                                     count += 1
                             
-                            utils_auth.write_log(f"Người dùng {st.session_state.get('username', 'Unknown')} đã Import {count} sản phẩm vào danh sách Nhập kho HCNS")
+                            utils_auth.write_log(f"Người dùng {st.session_state.get('username', 'Unknown')} đã Import {count} sản phẩm vào danh sách Tiêu Hủy")
                             st.success(f"✅ Đã tải lên và lưu vào cơ sở dữ liệu {count} dòng! (Bỏ qua {skip} dòng thiếu Mã Barcode)")
                         else:
                             st.error("❌ File Excel không hợp lệ: Không tìm thấy cột 'Mã Barcode'.")

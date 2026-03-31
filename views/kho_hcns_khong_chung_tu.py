@@ -12,10 +12,10 @@ def show():
         import_excel.render_import_section()
         
         # Khối Component 2: Các cụm Filters (Ngày, Thể loại, SKU)
-        selected_skus = filters.render_filters()
+        selected_ngay, selected_skus = filters.render_filters()
         
         # Khối Component 3: Bảng dữ liệu Grid Ag-Grid / Dataframe natively
-        grid.render_data_grid(selected_skus)
+        grid.render_data_grid(selected_ngay, selected_skus)
         
         # Khối Component 4: Giỏ hàng và cập nhật database
         cart.render_cart()

@@ -3,22 +3,29 @@ import pandas as pd
 from sqlalchemy import text
 from utils import get_engine, load_query
 
-def render_data_grid(selected_date, selected_skus):
+def render_data_grid(selected_ngay, selected_phan_loai, selected_skus):
     engine = get_engine()
     
-    q_data_template = load_query("nhap_kho_hcns/sku_ten_sp_hsd_so_luong.sql")
-    
-    # Prepare WHERE replacements (Chỉ lọc ngày trong SQL)
-    date_cond = "1=1" if selected_date == "Tất cả" else "ngay_nhap = :date_val"
-    sql_text = q_data_template.replace("{filters}", date_cond)
-    
+    q_data_template = load_query("tieu_huy/get_all.sql")
+    q_data = q_data_template.format(filters="1=1")
+
     with engine.begin() as conn:
-        params = {"date_val": selected_date} if selected_date != "Tất cả" else {}
-        df_data = pd.read_sql(text(sql_text), conn, params=params)
+        df_data = pd.read_sql(text(q_data), conn)
 
     # Apply Filters in Pandas for safety/flexibility
+    if selected_ngay and selected_ngay != "Tất cả":
+        if 'Ngày cập nhật' in df_data.columns:
+            df_data = df_data[df_data['Ngày cập nhật'].astype(str).str.startswith(selected_ngay)]
+
+    if selected_phan_loai and selected_phan_loai != "Tất cả":
+        if 'Phân loại' in df_data.columns:
+            df_data = df_data[df_data['Phân loại'] == selected_phan_loai]
+        
     if selected_skus:
-        df_data = df_data[df_data['SKU'].isin(selected_skus)]
+        if 'Mã Barcode' in df_data.columns:
+            df_data = df_data[df_data['Mã Barcode'].isin(selected_skus)]
+        elif 'sku' in df_data.columns:
+            df_data = df_data[df_data['sku'].isin(selected_skus)]
 
     # === TÍNH TOÁN GRAND TOTAL TỔNG ===
     total_nhan = int(df_data['Số lượng'].sum()) if 'Số lượng' in df_data.columns else 0
@@ -37,7 +44,7 @@ def render_data_grid(selected_date, selected_skus):
         gb = GridOptionsBuilder.from_dataframe(df_data)
         gb.configure_selection('multiple', use_checkbox=True)
         
-        gb.configure_column("SKU", pinned='left')
+        gb.configure_column("Mã Barcode", pinned='left')
         gb.configure_column("Tên SP", pinned='left')
         
         # Gắn hàng Grand Total (Tổng cộng) ghim cứng dưới đáy bảng AgGrid
@@ -90,7 +97,7 @@ def render_data_grid(selected_date, selected_skus):
         if selected_data:
             for row_data in selected_data:
                 item = row_data.copy()
-                item['custom_da_xuat'] = int(item.get('Số lượng', 0))
+                item['custom_da_xuat'] = int(item.get('Số lượng', item.get('so_luong', 0)))
                 item['custom_note'] = ''
                 st.session_state.cart.append(item)
             st.success(f"Đã thêm {len(selected_data)} sản phẩm!")
