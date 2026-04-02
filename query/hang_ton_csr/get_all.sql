@@ -1,4 +1,5 @@
 select
+    id,
     ma_sp as 'Mã SP',
     ma_barcode as 'Mã Barcode',
     ten_san_pham as 'Tên SP',

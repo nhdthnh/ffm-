@@ -1,0 +1,1 @@
+select distinct doi_tac from thu_hoi_boxme

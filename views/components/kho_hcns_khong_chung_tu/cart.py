@@ -4,6 +4,8 @@ from utils import get_engine
 import utils_auth
 
 def render_cart():
+    if 'cart' not in st.session_state:
+        st.session_state.cart = []
     engine = get_engine()
     st.markdown("---")
     st.subheader("📋 DANH SÁCH SẢN PHẨM XUẤT")
@@ -47,7 +49,6 @@ def render_cart():
         hc1.markdown("**BARCODE**")
         hc2.markdown("**DESCRIPTION**")
         hc3.markdown("**HSD**")
-        hc4.markdown("**TÌNH TRẠNG**")
         hc5.markdown("**SỐ LƯỢNG**")
         hc6.markdown("**ĐÃ XUẤT**")
         hc7.markdown("**CÒN LẠI**")
@@ -58,23 +59,31 @@ def render_cart():
         for idx, item in enumerate(st.session_state.cart):
             with st.container():
                  c1, c2, c3, c4, c5, c6, c7, c8, c9 = st.columns(col_widths)
-                 c1.write(str(item.get('SKU', '')))
-                 c2.write(str(item.get('Tên SP', '')))
-                 c3.write(str(item.get('Hạn sử dụng', '')))
-                 c4.write(str(item.get('Tình trạng sản phẩm', '')))
                  
-                 thuc_nhan = int(item.get('Số lượng', 0))
-                 c5.write(str(thuc_nhan))
+                 new_sku = c1.text_input("SKU", value=str(item.get('SKU', '')), label_visibility="collapsed", key=f"sku_{idx}")
+                 st.session_state.cart[idx]['SKU'] = new_sku
+                 
+                 new_ten = c2.text_input("Tên SP", value=str(item.get('Tên SP', '')), label_visibility="collapsed", key=f"ten_{idx}")
+                 st.session_state.cart[idx]['Tên SP'] = new_ten
+                 
+                 hsd_val = item.get('Hạn sử dụng')
+                 hsd_str = str(hsd_val) if hsd_val is not None and str(hsd_val).strip().lower() != 'none' else ""
+                 new_hsd = c3.text_input("HSD", value=hsd_str, label_visibility="collapsed", key=f"hsd_{idx}")
+                 st.session_state.cart[idx]['Hạn sử dụng'] = new_hsd if new_hsd.strip() else None
+                 
+                 thuc_nhan = int(item.get('Số lượng') or 0)
+                 new_sl = c5.number_input("Số lượng", value=thuc_nhan, step=1, label_visibility="collapsed", key=f"sl_{idx}")
+                 st.session_state.cart[idx]['Số lượng'] = new_sl
                  
                  da_xuat = int(item.get('custom_da_xuat', 0))
                  new_da_xuat = c6.number_input("Đã xuất", value=da_xuat, step=1, label_visibility="collapsed", key=f"da_xuat_{idx}")
                  st.session_state.cart[idx]['custom_da_xuat'] = int(new_da_xuat)
                  
-                 con_lai = thuc_nhan - int(new_da_xuat)
+                 con_lai = int(new_sl) - int(new_da_xuat)
                  c7.write(str(con_lai))
                  total_qty += int(new_da_xuat)
                  
-                 new_note = c8.text_input("Ghi chú", value=item.get('custom_note', ''), label_visibility="collapsed", key=f"note_{idx}")
+                 new_note = c8.text_input("Ghi chú", value=str(item.get('custom_note', '')), label_visibility="collapsed", key=f"note_{idx}")
                  st.session_state.cart[idx]['custom_note'] = new_note
                  
                  if c9.button("🗑️", key=f"del_{idx}"):
@@ -95,12 +104,20 @@ def render_cart():
                         con_lai_cap_nhat = thuc_nhan - da_xuat
                         
                         update_conn.execute(text("""
-                            UPDATE nhap_kho_hcns 
-                            SET so_luong = :p_so_luong, ghi_chu = :p_note 
+                            UPDATE kho_hcns_khong_chung_tu 
+                            SET ma_barcode = :p_sku,
+                                ten_san_pham = :p_ten,
+                                han_su_dung = :p_hsd,
+                                so_luong = :p_so_luong, 
+                                ghi_chu = :p_note,
+                                ngay_cap_nhap = CURRENT_TIMESTAMP()
                             WHERE id = :p_id
                         """), {
+                            "p_sku": item.get('SKU', ''),
+                            "p_ten": item.get('Tên SP', ''),
+                            "p_hsd": item.get('Hạn sử dụng') if item.get('Hạn sử dụng') and str(item.get('Hạn sử dụng')).strip() else None,
                             "p_so_luong": con_lai_cap_nhat,
-                            "p_note": item.get('custom_note'),
+                            "p_note": item.get('custom_note', ''),
                             "p_id": row_id
                         })
                         updated_count += 1

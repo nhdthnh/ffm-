@@ -95,6 +95,8 @@ def render_data_grid(selected_ngay, selected_phan_loai, selected_skus):
             selected_data = edited_df[edited_df['Chọn'] == True].to_dict(orient='records')
     if st.button("➕ Thêm vào danh sách", type="primary"):
         if selected_data:
+            if 'cart' not in st.session_state:
+                st.session_state.cart = []
             for row_data in selected_data:
                 item = row_data.copy()
                 item['custom_da_xuat'] = int(item.get('Số lượng', item.get('so_luong', 0)))

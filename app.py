@@ -1,6 +1,6 @@
 import streamlit as st
 import base64
-from views import thu_hoi_boxme, hang_nhap_kho_hcns, hang_ton_csr, kho_hcns_khong_chung_tu, tieu_huy, login, system_logs, report
+from views import thu_hoi_boxme, hang_nhap_kho_hcns, hang_ton_csr, kho_hcns_khong_chung_tu, tieu_huy, login, system_logs, report, template
 import utils_auth
 
 # Page configuration
@@ -83,6 +83,7 @@ else:
                 "🧾 Hàng tồn CSR",
                 "📋 HCNS không chứng từ",
                 "🗑️ Tiêu hủy",
+                "📄 Template",
                 "📓 Nhật ký hệ thống"
             ],
             label_visibility="collapsed"
@@ -99,6 +100,8 @@ else:
         kho_hcns_khong_chung_tu.show()
     elif page == "🗑️ Tiêu hủy":
         tieu_huy.show()
+    elif page == "📄 Template":
+        template.show()
     elif page == "📓 Nhật ký hệ thống":
         system_logs.show()
     elif page == "📊 Report":
