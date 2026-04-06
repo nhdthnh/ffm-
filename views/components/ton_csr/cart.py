@@ -2,6 +2,7 @@ import streamlit as st
 from sqlalchemy import text
 from utils import get_engine
 import utils_auth
+from views.components._shared import inject_cart_css
 
 def render_cart():
     if 'cart' not in st.session_state:
@@ -11,38 +12,7 @@ def render_cart():
     st.subheader("📋 DANH SÁCH SẢN PHẨM XUẤT")
     
     if st.session_state.cart:
-        # UI Styling cho Icon xoá gỡ bỏ CSS dư thừa
-        st.markdown("""
-            <style>
-            div[data-testid="column"]:last-child div.stButton > button,
-            div[data-testid="stColumn"]:last-child div.stButton > button {
-                margin: 0 auto !important;
-                margin-top: 4px !important;
-                display: flex !important;
-                justify-content: center !important;
-                align-items: center !important;
-                width: 32px !important;
-                height: 32px !important;
-                padding: 0px !important;
-                border: none !important;
-                background-color: transparent !important;
-                box-shadow: none !important;
-                outline: none !important;
-                font-size: 14px !important;
-                line-height: 1 !important;
-            }
-            div[data-testid="column"]:last-child div.stButton > button p,
-            div[data-testid="stColumn"]:last-child div.stButton > button p {
-                font-size: 14px !important;
-                margin: 0 !important;
-            }
-            div[data-testid="column"]:last-child div.stButton > button:hover,
-            div[data-testid="stColumn"]:last-child div.stButton > button:hover {
-                background-color: #f0f2f6 !important;
-                border-radius: 4px !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
+        inject_cart_css()
         
         col_widths = [1.0, 1.2, 2.0, 1.3, 1.0, 1.5, 0.3]
         hc1, hc2, hc3, hc4, hc5, hc6, hc7 = st.columns(col_widths)

@@ -85,7 +85,7 @@ def render_data_grid(selected_ngay, selected_phan_loai, selected_skus):
             selected_data = df_data.iloc[selected_indices].to_dict(orient='records')
             
         except Exception:
-            st.info("💡 MÁY BÁO: Để có Màu sắc sinh động đồng thời có hộp Chọn, anh vui lòng chạy lệnh `pip install streamlit-aggrid` trên Terminal.")
+            st.info("💡 Cài `pip install streamlit-aggrid` để có bảng màu và checkbox chọn hàng.")
             edited_df = st.data_editor(
                 df_data, 
                 use_container_width=True, 

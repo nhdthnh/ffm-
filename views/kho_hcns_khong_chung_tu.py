@@ -1,24 +1,32 @@
+"""
+views/kho_hcns_khong_chung_tu.py — Trang HCNS không chứng từ
+"""
+
 import streamlit as st
+import utils_auth
 from views.components.kho_hcns_khong_chung_tu import filters, grid, cart, import_excel
+
 
 def show():
     if "cart" not in st.session_state:
         st.session_state.cart = []
-        
-    st.title("📦 Hàng nhập kho HCNS - Không chứng từ")
-    
+
+    st.markdown("## 📋 HCNS không chứng từ")
+
+    utils_auth.require_perm("perm_hcns_khong_ct", required=1)
+    readonly = st.session_state.get("page_readonly", False)
+    if readonly:
+        utils_auth.show_readonly_banner()
+
     try:
-        # Khối Component 1: Giao diện Import Excel an toàn.
-        import_excel.render_import_section()
-        
-        # Khối Component 2: Các cụm Filters (Ngày, Thể loại, SKU)
+        if not readonly:
+            import_excel.render_import_section()
+
         selected_ngay, selected_skus = filters.render_filters()
-        
-        # Khối Component 3: Bảng dữ liệu Grid Ag-Grid / Dataframe natively
         grid.render_data_grid(selected_ngay, selected_skus)
-        
-        # Khối Component 4: Giỏ hàng và cập nhật database
-        cart.render_cart()
-        
+
+        if not readonly:
+            cart.render_cart()
+
     except Exception as e:
-        st.error(f"Failed to load data components: {e}")
+        st.error(f"❌ Lỗi tải dữ liệu: {e}")
