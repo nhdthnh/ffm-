@@ -36,13 +36,22 @@ def render_data_grid(selected_date, selected_phan_loai, selected_skus):
     m4.metric("📦 Tổng Còn Lại", f"{total_con_lai:,}")
 
     st.subheader("📋 Bảng Dữ Liệu")
+
+    if 'HSD Tiêu chuẩn (tháng)' in df_data.columns:
+        df_data['HSD Tiêu chuẩn (tháng)'] = pd.to_numeric(df_data['HSD Tiêu chuẩn (tháng)'], errors='coerce').astype('Int64')
+    if 'HSD Còn lại (tháng)' in df_data.columns:
+        df_data['HSD Còn lại (tháng)'] = pd.to_numeric(df_data['HSD Còn lại (tháng)'], errors='coerce').round(2)
+    if '% HSD Còn lại' in df_data.columns:
+        df_data['% HSD Còn lại'] = pd.to_numeric(df_data['% HSD Còn lại'], errors='coerce').round(2)
         
     # Thiết lập màu sắc nền cho từng trạng thái Phân loại
     def color_phan_loai(val):
         if pd.isna(val) or val is None:
             return ''
         val_str = str(val).strip()
-        if val_str == 'Hàng nguyên vẹn':
+        if val_str == 'Hết hạn':
+            return 'background-color: #6c757d; color: #ffffff' # xám
+        elif val_str == 'Hàng nguyên vẹn':
             return 'background-color: #d4edda; color: #000000' # xanh lá
         elif val_str == 'Hàng lỗi ngoại quan':
             return 'background-color: #fff3cd; color: #000000' # vàng nhạt
@@ -52,12 +61,18 @@ def render_data_grid(selected_date, selected_phan_loai, selected_skus):
             return 'background-color: #ff2424; color: #ffffff' # đỏ nhạt
         return ''
 
-    styled_df = df_data
+    styled_df = df_data.style
+    
+    styled_df = styled_df.format({
+        'HSD Còn lại (tháng)': "{:.2f}",
+        '% HSD Còn lại': "{:.2f}"
+    }, na_rep="")
+    
     if 'Phân loại' in df_data.columns:
         try:
-            styled_df = df_data.style.map(color_phan_loai, subset=['Phân loại'])
+            styled_df = styled_df.map(color_phan_loai, subset=['Phân loại'])
         except Exception:
-            styled_df = df_data.style.applymap(color_phan_loai, subset=['Phân loại'])
+            styled_df = styled_df.applymap(color_phan_loai, subset=['Phân loại'])
 
     column_config = {}
     try:
@@ -66,7 +81,10 @@ def render_data_grid(selected_date, selected_phan_loai, selected_skus):
             "SKU": st.column_config.TextColumn(pinned=True),
             "Tên SP": st.column_config.TextColumn(pinned=True),
             "Hạn sử dụng": st.column_config.Column(pinned=True),
-            "Tình trạng sản phẩm": st.column_config.Column(pinned=True)
+            "Tình trạng sản phẩm": st.column_config.Column(pinned=True),
+            "HSD Còn lại (tháng)": st.column_config.NumberColumn(format="%.2f"),
+            "% HSD Còn lại": st.column_config.NumberColumn(format="%.2f"),
+            "HSD Tiêu chuẩn (tháng)": st.column_config.NumberColumn(format="%d")
         }
     except Exception:
         column_config = {}
@@ -82,7 +100,9 @@ def render_data_grid(selected_date, selected_phan_loai, selected_skus):
         cellstyle_jscode = JsCode("""
         function(params) {
             if (!params.value) return null;
-            if (params.value === 'Hàng nguyên vẹn') {
+            if (params.value === 'Hết hạn') {
+                return {'color': '#ffffff', 'backgroundColor': '#6c757d'};
+            } else if (params.value === 'Hàng nguyên vẹn') {
                 return {'color': '#155724', 'backgroundColor': '#d4edda'};
             } else if (params.value === 'Hàng lỗi ngoại quan') {
                 return {'color': '#856404', 'backgroundColor': '#fff3cd'};
@@ -98,6 +118,19 @@ def render_data_grid(selected_date, selected_phan_loai, selected_skus):
         
         gb.configure_column("SKU", pinned='left')
         gb.configure_column("Tên SP", pinned='left')
+        
+        # Format HSD
+        gb.configure_column("HSD Tiêu chuẩn (tháng)", 
+                            type=["numericColumn"], 
+                            valueFormatter=JsCode("function(params) { return params.value == null ? '' : Math.floor(params.value); }"))
+
+        gb.configure_column("HSD Còn lại (tháng)", 
+                            type=["numericColumn"], 
+                            valueFormatter=JsCode("function(params) { return params.value == null ? '' : Number(params.value).toFixed(2); }"))
+                            
+        gb.configure_column("% HSD Còn lại", 
+                            type=["numericColumn"], 
+                            valueFormatter=JsCode("function(params) { return params.value == null ? '' : Number(params.value).toFixed(2); }"))
         
         # Gắn hàng Grand Total (Tổng cộng) ghim cứng dưới đáy bảng AgGrid
         gb.configure_grid_options(
