@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore")
 # ─── CẤU HÌNH ────────────────────────────────────────────────
 NAS_IP    = "192.168.1.119"
 USERNAME  = "thanhnhu"
-PASSWORD  = "Nhdthnh10102002"
+PASSWORD  = ""
 FILE_PATH = "/team-folders/OQR/HCNS/TRUYỀN THÔNG NỘI BỘ OQR/CSR/OQR_TỔN KHO HCNS.osheet"
 
 DB = dict(
